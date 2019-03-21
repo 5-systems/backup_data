@@ -1,5 +1,8 @@
 <?php
 
+// version 24.05.2018
+include_once('5c_std_lib.php');
+
 date_default_timezone_set('Etc/GMT-3');
 ini_set("default_socket_timeout", 600);
 
@@ -26,7 +29,6 @@ function select_files($search_dir, $select_function_type="", $maximum_recursion_
    return($selected_files);
  }
 
-	
 function treat_current_path(&$selected_files, &$dir_path, $select_function_type, $recursion_level, $maximum_recursion_level, &$counter=NULL, &$maximum_number_selected_files) {
 
 	if( count($dir_path)==0 ) {
@@ -103,10 +105,11 @@ function treat_current_path(&$selected_files, &$dir_path, $select_function_type,
 	return;
 }
 
-
-function write_log($message, $log_path) {
+function write_log($message, $log_path, $prefix='') {
 
 	$function_result=false;
+	
+	if( strlen($log_path)===0 ) return($function_result);
 	
 	if( is_string($message) ) {
 		$message_tmp=$message;
@@ -121,13 +124,19 @@ function write_log($message, $log_path) {
 			$message_text='';
 		}
 		else{
-			$message_text=date('Ymd H:i:s').':';
+			$message_text='';
+			if( strlen($prefix)>0 ) $message_text.=$prefix.' ';
+			
+			$message_text.=date('Ymd H:i:s').':';
 			foreach($message as $current_parameter => $current_value) {
-				$message_text.=' '.$current_parameter.': '.$current_value;
+			    $message_text.=' '.$current_parameter.': '.print_r($current_value, true);
 			}
 		}
-	
+
+		if( function_exists('html_to_utf8') ) $message_text=html_to_utf8($message_text);		
+		
 		$message_text.=PHP_EOL;
+		
 		fwrite($fp, $message_text);
 		fflush($fp);
 		fclose($fp); 			
@@ -517,6 +526,80 @@ function exec_shell_command($shell_command, $log_file='', $shell_command_present
         }
 
         return($return_val);
+}
+
+function get_file_info($file_path) {
+
+   $result=array();
+   
+   // Extension
+   $_file_exten='';
+   $_file_exten_pos=strrpos($file_path, '.');
+   if( $_file_exten_pos!==false && $_file_exten_pos<(strlen($file_path)-1) ) {
+	 $_file_exten=substr($file_path, $_file_exten_pos+1);
+   }
+   
+   $result['extension']=$_file_exten;
+   
+   // Other properties
+   $_stat_properties=stat($file_path);
+   if( is_array($_stat_properties) ) {
+   
+      reset($_stat_properties);
+      while( list($key, $value)=each($_stat_properties) ) {
+	 $result[$key]=$value;     
+      }
+   
+   }
+
+   return($result);
+}
+
+function select_files_linux($search_dir, $search_string, $select_function_type="") {
+
+   $result=array();
+   
+   $output_array=array();
+   $command_status=0;
+   
+   exec("find ".$search_dir." -name '*".$search_string."*' -print", $output_array, $command_status);
+   
+   if( $command_status===0 ) {
+      
+      reset($output_array);
+      while( list($key, $value)=each($output_array) ) {
+         
+      	$file_attributes=stat($value);
+			if( $file_attributes===false ) {
+				$file_attributes=Array();
+			}
+			
+			$path_parts = pathinfo($value);
+						
+			$file_attributes['name']=$path_parts['basename'];			
+			$file_attributes['dir']=$path_parts['dirname'];
+			$file_attributes['exten']=$path_parts['extension'];			
+			
+         if( is_dir($value) && substr($file_attributes['name'], 0, 1)!=='.' ) {
+				$file_attributes['directory']=true;
+			}
+			elseif( is_file($value) ) {
+				$file_attributes['directory']=false;
+			}
+			else {
+				continue;
+			}			
+			
+			if( select_function($select_function_type, $value, $file_attributes) ) {
+			   $result[$value]=$file_attributes;
+			}   
+			
+      }
+      
+   }
+   
+   
+   return($result);
 }
 
 ?>
