@@ -22,6 +22,9 @@
         $SMTPDebug=0;
 	
 	// List of bases
+	$list_of_bases=Array();
+	$list_of_bases[]='database_name';
+
         $number_of_files_default=7;
         $number_of_files_for_each_base=array();
         $number_of_files_for_each_base['database_name']=7;
@@ -29,9 +32,6 @@
         $number_of_files_ftp_default=7;
         $number_of_files_for_each_base_ftp=array();
         $number_of_files_for_each_base_ftp['database_name']=7;
-
-	$list_of_bases=Array();
-	$list_of_bases[]='database_name';
 
 	// End settings
 ?>
